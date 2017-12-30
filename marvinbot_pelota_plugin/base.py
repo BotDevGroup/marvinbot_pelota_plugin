@@ -35,7 +35,7 @@ class MarvinBotPelotaPlugin(Plugin):
         return {
             'short_name': self.name,
             'enabled': True,
-            'base_url': 'http://66.128.53.87:8083/Estadisticas/Standings/Standings',
+            'base_url': 'http://lidomwidgets.digisport.com.do/Estadisticas/Standings/Standings',
             'emoji': emoji
         }
 
@@ -73,7 +73,7 @@ class MarvinBotPelotaPlugin(Plugin):
             if temporada:
                 data["Temporada"] = temporada 
 
-            response = s.post(self.config.get('base_url'), data=data)
+            response = s.post(self.config.get('base_url'), data=data, timeout=20)
             r = self.html_parse(response.text)
             return r
 
