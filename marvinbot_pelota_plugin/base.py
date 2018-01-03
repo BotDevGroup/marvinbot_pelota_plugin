@@ -73,17 +73,17 @@ class MarvinBotPelotaPlugin(Plugin):
             if temporada:
                 data["Temporada"] = temporada 
 
-            response = s.post(self.config.get('base_url'), data=data, timeout=20)
+            response = s.post(self.config.get('base_url'), data=data, timeout=60)
             r = self.html_parse(response.text)
             return r
 
     def make_msg(self, data, title):
         msg = "*{}*\n\n".format(title)
-        place = 1
 
         for team in data:
-            msg += "{} - {} *{}*\n--------- {}\n".format(place, self.config.get("emoji").get(team), team, "\t".join(data[team]))
-            place = place + 1
+            # msg += "{} *{}*\n--------- {}\n".format(self.config.get("emoji").get(team), team, "\t".join(data[team]))
+            msg += "{} *{}*\n*J:* {}, *G:* {}, *P:* {}, *Pct:* {}, *Dif:* {}\n".format(self.config.get("emoji").get(team), team, *data[team])
+        
         return msg
 
     def on_pelota_command(self, update, *args, **kwargs):
