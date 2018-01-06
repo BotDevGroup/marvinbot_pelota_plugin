@@ -47,9 +47,7 @@ class MarvinBotPelotaPlugin(Plugin):
 
     def setup_handlers(self, adapter):
         self.bot = adapter.bot
-        self.add_handler(CommandHandler('pelota', self.on_pelota_command, command_description='Dominican Republic Baseball Standings')
-            .add_argument('--pizarra', help='Dominican Republic Baseball Dashboard', action='store_true')
-            )
+        self.add_handler(CommandHandler('pelota', self.on_pelota_command, command_description='Dominican Republic Baseball Standings'))
         self.add_handler(CommandHandler('pizarra', self.on_pizarra_command, command_description='Dominican Republic Baseball Dashboard'))
 
     def setup_schedules(self, adapter):
@@ -160,17 +158,22 @@ class MarvinBotPelotaPlugin(Plugin):
 
         return msg
 
-    def dashboard(self, message):
+    def on_pizarra_command(self, update, *args, **kwargs):
+        message = get_message(update)
+
         try:
             data = self.dashboard_http()
             msg = self.dashboard_msg(data)
         except Exception as err:
             log.error("Pelota error: {}".format(err))
             msg = "❌ Error ocurrect getting the dashboard"
-            
-        return msg
 
-    def stats(self, message):
+        self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+
+    def on_pelota_command(self, update, *args, **kwargs):
+        message = get_message(update)
+        dashboard = kwargs.get('pizarra', False)
+        
         msg = "❌ Season not found"
 
         try:
@@ -197,23 +200,5 @@ class MarvinBotPelotaPlugin(Plugin):
         except Exception as err:
             log.error("Pelota error: {}".format(err))
             msg = "❌ Error"
-
-        return msg
-
-    def on_pizarra_command(self, update, *args, **kwargs):
-        message = get_message(update)
-        msg = self.dashboard(message)
-
-        self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
-
-    def on_pelota_command(self, update, *args, **kwargs):
-        message = get_message(update)
-        dashboard = kwargs.get('pizarra', False)
-        msg = ""
-
-        if dashboard:
-            msg = self.dashboard(message)    
-        else:
-            msg = self.stats(message)
 
         self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
