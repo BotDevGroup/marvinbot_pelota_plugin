@@ -129,6 +129,10 @@ class MarvinBotPelotaPlugin(Plugin):
                     if len(img) == 3:
                         game['obs'] = img
 
+                    err = [td.text.strip() for td in tr.find_all('td', class_='EX2')]
+                    if err:
+                        game['err'] = err
+
             game['teams'] = teams
             game['results'] = results
         
@@ -149,11 +153,15 @@ class MarvinBotPelotaPlugin(Plugin):
         msg = ""
         
         for game in dashboard:
-            msg += "Estadio: *{}*\n{}\n\n---- R H E\n".format(game['stadium'], game['inning'])
-            msg += "{} {} {} {}\n".format(self.config.get("emoji").get(game['teams'][0]), *game['results'][0])
-            msg += "{} {} {} {}\n".format(self.config.get("emoji").get(game['teams'][1]), *game['results'][1])
-            if 'obs' in game:
-                msg += "O: {}, B: {}, S: {}\n".format(*game['obs'])
+            if 'err' in game:
+                msg += "Estadio: *{}*\n{}\n".format(game['stadium'], " ".join(game['err']))
+                msg += "{} vs {}\n".format(self.config.get("emoji").get(game['teams'][0]),self.config.get("emoji").get(game['teams'][1]))
+            else:
+                msg += "Estadio: *{}*\n{}\n\n---- R H E\n".format(game['stadium'], game['inning'])
+                msg += "{} {} {} {}\n".format(self.config.get("emoji").get(game['teams'][0]), *game['results'][0])
+                msg += "{} {} {} {}\n".format(self.config.get("emoji").get(game['teams'][1]), *game['results'][1])
+                if 'obs' in game:
+                    msg += "O: {}, B: {}, S: {}\n".format(*game['obs'])
             msg += "-"*20 + "\n"
 
         return msg
@@ -166,7 +174,7 @@ class MarvinBotPelotaPlugin(Plugin):
             msg = self.dashboard_msg(data)
         except Exception as err:
             log.error("Pelota error: {}".format(err))
-            msg = "❌ Error ocurrect getting the dashboard"
+            msg = "❌ Error occurred getting the dashboard"
 
         self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
 
