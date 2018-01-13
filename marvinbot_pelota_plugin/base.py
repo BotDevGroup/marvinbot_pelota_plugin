@@ -14,9 +14,12 @@ import re
 import requests
 import ctypes
 import bs4
+import time
+import datetime
 
 log = logging.getLogger(__name__)
 
+last = []
 
 class MarvinBotPelotaPlugin(Plugin):
     def __init__(self):
@@ -38,7 +41,8 @@ class MarvinBotPelotaPlugin(Plugin):
             'enabled': True,
             'base_url': 'http://lidomwidgets.digisport.com.do/Estadisticas/Standings/Standings',
             'base_url_dashboard': 'http://estadisticas.lidom.com/Estadisticas/Inicio/Pizarra',
-            'emoji': emoji
+            'emoji': emoji,
+            'timer': 15*60
         }
 
     def configure(self, config):
@@ -167,16 +171,31 @@ class MarvinBotPelotaPlugin(Plugin):
         return msg
 
     def on_pizarra_command(self, update, *args, **kwargs):
+        global last
         message = get_message(update)
+        last = [x for x in last if x['date'] + self.config.get("timer") > time.time()]
+        old_message = next((x for x in last if x['chat_id'] == message.chat_id), None)
 
-        try:
+        try:      
             data = self.dashboard_http()
             msg = self.dashboard_msg(data)
         except Exception as err:
             log.error("Pelota error: {}".format(err))
             msg = "❌ Error occurred getting the dashboard"
+            self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+            return
 
-        self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+        if old_message and old_message['date'] + self.config.get("timer") > time.time():
+            msg_update = "{}\n__updated at {}__\n".format(msg, datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S"))
+            self.adapter.bot.editMessageText(chat_id=message.chat_id, text=msg_update, message_id=old_message['message_id'], parse_mode='Markdown', disable_web_page_preview = True)
+
+            msg_replay = "#pizarra #updated"
+            self.adapter.bot.sendMessage(chat_id=message.chat_id, reply_to_message_id=old_message['message_id'], text=msg_replay, parse_mode='Markdown', disable_web_page_preview = True)
+        else:
+            last_message = self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+            if old_message:
+                last.remove(old_message)
+            last.append({'date': time.time(), 'chat_id': message.chat_id, 'message_id': last_message.message_id})
 
     def on_pelota_command(self, update, *args, **kwargs):
         message = get_message(update)
