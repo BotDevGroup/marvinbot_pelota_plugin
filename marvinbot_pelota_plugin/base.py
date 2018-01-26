@@ -51,8 +51,8 @@ class MarvinBotPelotaPlugin(Plugin):
 
     def setup_handlers(self, adapter):
         self.bot = adapter.bot
-        self.add_handler(CommandHandler('pelota', self.on_pelota_command, command_description='Dominican Republic Baseball Standings'))
-        self.add_handler(CommandHandler('pizarra', self.on_pizarra_command, command_description='Dominican Republic Baseball Dashboard'))
+        self.add_handler(CommandHandler('pelota', self.on_pelota_command, command_description='Dominican Republic Baseball Standings.'))
+        self.add_handler(CommandHandler('pizarra', self.on_pizarra_command, command_description='Dominican Republic Baseball Dashboard.'))
 
     def setup_schedules(self, adapter):
         pass
@@ -181,7 +181,7 @@ class MarvinBotPelotaPlugin(Plugin):
             msg = self.dashboard_msg(data)
         except Exception as err:
             log.error("Pelota error: {}".format(err))
-            msg = "❌ Error occurred getting the dashboard"
+            msg = "❌ Error occurred getting the dashboard."
             self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
             return
 
@@ -189,7 +189,7 @@ class MarvinBotPelotaPlugin(Plugin):
             msg_update = "{}\n__updated at {}__\n".format(msg, datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S"))
             self.adapter.bot.editMessageText(chat_id=message.chat_id, text=msg_update, message_id=old_message['message_id'], parse_mode='Markdown', disable_web_page_preview = True)
 
-            msg_replay = "#pizarra #updated"
+            msg_replay = "#Pizarra updated successfully!"
             self.adapter.bot.sendMessage(chat_id=message.chat_id, reply_to_message_id=old_message['message_id'], text=msg_replay, parse_mode='Markdown', disable_web_page_preview = True)
         else:
             last_message = self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
@@ -201,7 +201,7 @@ class MarvinBotPelotaPlugin(Plugin):
         message = get_message(update)
         dashboard = kwargs.get('pizarra', False)
         
-        msg = "❌ Season not found"
+        msg = "❌ Season not found."
 
         try:
             year = ""
@@ -226,6 +226,6 @@ class MarvinBotPelotaPlugin(Plugin):
     
         except Exception as err:
             log.error("Pelota error: {}".format(err))
-            msg = "❌ Error"
+            msg = "❌ Error."
 
         self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
