@@ -16,6 +16,7 @@ import ctypes
 import bs4
 import time
 import datetime
+import time
 
 log = logging.getLogger(__name__)
 
@@ -34,14 +35,29 @@ class MarvinBotPelotaPlugin(Plugin):
             "Leones del Escogido":"🦁",
             "Escogido":"🦁",
             "Tigres del Licey":"🐯",
-            "Toros del Este":"🐮",
+            "Toros del Este":"🐮"
+        }
+        countries = {
+            "DOMINICANA":"🇩🇴",
+            "CUBA":"🇨🇺",
+            "PUERTO RICO":"🇵🇷",
+            "VENEZUELA":"🇻🇪",
+            "MÉXICO":"🇲🇽",
+            "DOM":"🇩🇴",
+            "CUB":"🇨🇺",
+            "PRI":"🇵🇷",
+            "VEN":"🇻🇪",
+            "MEX":"🇲🇽"
         }
         return {
             'short_name': self.name,
             'enabled': True,
             'base_url': 'http://lidomwidgets.digisport.com.do/Estadisticas/Standings/Standings',
             'base_url_dashboard': 'http://estadisticas.lidom.com/Estadisticas/Inicio/Pizarra',
+            'base_caribbean_url': 'https://www.seriecaribe.org',
+            'base_series_url': 'http://seriedelcaribeapp.info/api/digimetrics/score',
             'emoji': emoji,
+            "countries": countries,
             'timer': 15*60
         }
 
@@ -53,10 +69,13 @@ class MarvinBotPelotaPlugin(Plugin):
         self.bot = adapter.bot
         self.add_handler(CommandHandler('pelota', self.on_pelota_command, command_description='Dominican Republic Baseball Standings.'))
         self.add_handler(CommandHandler('pizarra', self.on_pizarra_command, command_description='Dominican Republic Baseball Dashboard.'))
+        self.add_handler(CommandHandler('caribe', self.on_caribbean_command, command_description='Caribbean Series Standings.'))
+        self.add_handler(CommandHandler('serie', self.on_series_command, command_description='Caribbean Series Dashboard.'))
 
     def setup_schedules(self, adapter):
         pass
 
+    # Pelota
     def stats_parse(self, response_text):
         r = OrderedDict()
         html_soup = BeautifulSoup(response_text, 'html.parser')
@@ -91,6 +110,7 @@ class MarvinBotPelotaPlugin(Plugin):
         
         return msg
 
+    # Pizarra
     def dashboard_parse(self, response_text):
         def getnum(txt):
             if not txt:
@@ -170,6 +190,92 @@ class MarvinBotPelotaPlugin(Plugin):
 
         return msg
 
+    # Caribe
+    def caribbean_parse(self, response_text):
+        r = OrderedDict()
+        html_soap = BeautifulSoup(response_text, 'html.parser')
+        stading = html_soap.find('table', class_='table-standings')
+        
+        for tr in stading.tbody.find_all('tr'):
+            team = tr.find('h6').text.strip()
+            r[team] = [td.text.strip() for td in tr.find_all('td')[1:]]
+
+        return r
+
+    def caribbean_http(self):
+        r = None
+
+        with requests.Session() as s:
+            response = s.get(self.config.get('base_caribbean_url'), timeout=90)
+            r = self.caribbean_parse(response.text)
+
+        return r
+
+    def caribbean_msg(self, data):
+        msg = "*Serie del Caribe*\n\n"
+
+        for team in data:
+            msg += "{} *{}*\n*G:* {}, *P:* {}, *%:* {}, *Dif:* {}\n".format(self.config.get("countries").get(team), team, *data[team])
+        
+        return msg
+
+    # Serie
+    def series_parse(self, response):
+        dashboard = []
+        
+        for game in response.json():
+            g = OrderedDict()
+            
+            g['date'] = game['dateGame']
+            g['status'] = game['status']['status']
+        
+            g['inning'] = game['inning']
+            g['part'] = "Alta" if game['part'] == 'A' else "Baja"
+        
+            g['obs'] = [game['outs'], game['balls'], game['strikes']]
+        
+            g['teams'] = [game['visitor']['name'].upper(), game['local']['name'].upper()]
+            g['results'] = [
+                [game['visitorBoard']['r'], game['visitorBoard']['h'], game['visitorBoard']['e']],
+                [game['localBoard']['r'], game['localBoard']['h'], game['localBoard']['e']]
+                ]
+        
+            dashboard.append(g)
+
+        return dashboard
+
+    def series_http(self):
+        r = None
+
+        headers = {
+            "Authorization": "Basic bce4c0a9182d4d534c228e11e6c03ec3:JU1sb7c7FAUoYgU/MQROzy5gkOOTgZChx4jWlzjfL/o=:2018-02-04T03:01:37.465Z"
+        }
+
+        d = datetime.date.today() - datetime.timedelta(1) if int(time.strftime("%H")) < 9 else datetime.date.today()
+       
+        payload = {'date':  d.strftime("%a %b %d %Y")}
+
+        with requests.Session() as s:
+            response = s.get(self.config.get('base_series_url'), timeout=90, headers=headers, params=payload)
+            r = self.series_parse(response)
+
+        return r
+
+    def series_msg(self, dashboard):
+        msg = ""
+        
+        for game in dashboard:
+            msg += "- {}\n{} {}\n\n---- R H E\n".format(game['status'], game['part'], game['inning'])
+            msg += "{} {} {} {}\n".format(self.config.get("countries").get(game['teams'][0]), *game['results'][0])
+            msg += "{} {} {} {}\n".format(self.config.get("countries").get(game['teams'][1]), *game['results'][1])
+               
+            msg += "O: {}, B: {}, S: {}\n".format(*game['obs'])
+            msg += "-"*20 + "\n"
+
+        return msg
+
+
+    # Commands
     def on_pizarra_command(self, update, *args, **kwargs):
         global last
         message = get_message(update)
@@ -229,3 +335,43 @@ class MarvinBotPelotaPlugin(Plugin):
             msg = "❌ Error."
 
         self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+
+    def on_caribbean_command(self, update, *args, **kwargs):
+        message = get_message(update)
+        dashboard = kwargs.get('pizarra', False)
+
+        try:
+            data = self.caribbean_http()
+            msg = self.caribbean_msg(data)
+        except Exception as err:
+            log.error("Pelota error: {}".format(err))
+            msg = "❌ Error."
+
+        self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+
+    def on_series_command(self, update, *args, **kwargs):
+            global last
+            message = get_message(update)
+            last = [x for x in last if x['date'] + self.config.get("timer") > time.time()]
+            old_message = next((x for x in last if x['chat_id'] == message.chat_id), None)
+    
+            try:      
+                data = self.series_http()
+                msg = self.series_msg(data)
+            except Exception as err:
+                log.error("Pelota error: {}".format(err))
+                msg = "❌ Error occurred getting the dashboard."
+                self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+                return
+    
+            if old_message and old_message['date'] + self.config.get("timer") > time.time():
+                msg_update = "{}\n__updated at {}__\n".format(msg, datetime.datetime.now().strftime("%d/%m/%y %H:%M:%S"))
+                self.adapter.bot.editMessageText(chat_id=message.chat_id, text=msg_update, message_id=old_message['message_id'], parse_mode='Markdown', disable_web_page_preview = True)
+    
+                msg_replay = "#Serie updated successfully!"
+                self.adapter.bot.sendMessage(chat_id=message.chat_id, reply_to_message_id=old_message['message_id'], text=msg_replay, parse_mode='Markdown', disable_web_page_preview = True)
+            else:
+                last_message = self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+                if old_message:
+                    last.remove(old_message)
+                last.append({'date': time.time(), 'chat_id': message.chat_id, 'message_id': last_message.message_id})
