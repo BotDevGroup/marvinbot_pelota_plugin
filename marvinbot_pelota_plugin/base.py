@@ -230,7 +230,7 @@ class MarvinBotPelotaPlugin(Plugin):
             g['status'] = game['status']['status']
         
             g['inning'] = game['inning']
-            g['part'] = "Alta" if game['part'] == 'A' else "Baja"
+            g['part'] = "Alta" if 'A' == game['part'].strip() else "Baja"
         
             g['obs'] = [game['outs'], game['balls'], game['strikes']]
         
