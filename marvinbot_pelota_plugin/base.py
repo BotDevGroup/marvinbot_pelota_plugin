@@ -16,7 +16,6 @@ import ctypes
 import bs4
 import time
 import datetime
-import time
 
 log = logging.getLogger(__name__)
 
@@ -81,10 +80,10 @@ class MarvinBotPelotaPlugin(Plugin):
         html_soup = BeautifulSoup(response_text, 'html.parser')
 
         for tr in html_soup.tbody.find_all('tr'):
-            team = tr.td.a.text.strip()
+            team = tr.find('a').text.strip()
 
             # J G P Pct Dif
-            r[team] = [td.text.strip() for td in tr.find_all('td')[1:]]
+            r[team] = [td.text.strip() for td in tr.find_all('td')[2:]]
 
         return r
 
@@ -106,7 +105,7 @@ class MarvinBotPelotaPlugin(Plugin):
         msg = "*{}*\n\n".format(title)
 
         for team in data:
-            msg += "{} *{}*\n*J:* {}, *G:* {}, *P:* {}, *Pct:* {}, *Dif:* {}\n".format(self.config.get("emoji").get(team), team, *data[team])
+            msg += "{} *{}*\n*J:* {}, *G:* {}, *P:* {}, *Pct:* {}\n".format(self.config.get("emoji").get(team), team, *data[team])
         
         return msg
 
