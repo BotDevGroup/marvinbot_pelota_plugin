@@ -41,7 +41,6 @@ class MarvinBotPelotaPlugin(Plugin):
             'enabled': True,
             'base_url': 'http://estadisticas.lidom.com/',
             'emoji': emoji,
-            "countries": countries,
             'timer': 15*60
         }
 
