@@ -193,8 +193,7 @@ class MarvinBotPelotaPlugin(Plugin):
         message = get_message(update)
         try:
             data = self.stats_http()
-            if data:
-                msg = self.stats_msg(data, "Serie")
+            msg = self.stats_msg(data, "Serie")
         except Exception as err:
             log.error("Pelota error: {}".format(err))
             msg = "❌ Error."
