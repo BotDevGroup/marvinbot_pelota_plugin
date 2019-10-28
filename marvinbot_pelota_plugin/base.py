@@ -114,13 +114,12 @@ class MarvinBotPelotaPlugin(Plugin):
                     elif 'inning' not in game:
                         game['inning'] = "FINAL"
 
-                    if tr.find_all('td', class_='Equipo2'):
-                        for equipo in tr.find_all('td', class_='Equipo2'):
-                            teams.append(equipo.img['alt'])
-                    else:
-                        for equipo in tr.find_all('td', class_='Equipo'):
-                            if equipo.a:
-                                teams.append(equipo.a.text.strip())
+                    for equipo in tr.find_all('td', class_='Equipo2'):
+                        teams.append(equipo.img['alt'])
+
+                    for equipo in tr.find_all('td', class_='Equipo'):
+                        if equipo.a:
+                            teams.append(equipo.a.text.strip())
 
                     result = [td.text.strip() for td in tr.find_all('td', class_='EX')]
                     if result:
