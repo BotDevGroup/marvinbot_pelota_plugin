@@ -92,7 +92,8 @@ class MarvinBotPelotaPlugin(Plugin):
             if not txt:
                 pass
             rgx = re.compile(".*(\d+)\.png")
-            return rgx.search(txt).group(1)
+            if rgx.match(txt):
+                return rgx.search(txt).group(1)
 
         dashboard = []
         html_soup = BeautifulSoup(response_text, 'html.parser')
@@ -125,7 +126,7 @@ class MarvinBotPelotaPlugin(Plugin):
                     if result:
                         results.append(result)
 
-                    img = [getnum(i['src']) for i in tr.find_all('img') if not i['alt']]
+                    img = [getnum(i['src']) for i in tr.find_all('img') if not i.has_attr('alt')]
                     if len(img) == 3:
                         game['obs'] = img
 
