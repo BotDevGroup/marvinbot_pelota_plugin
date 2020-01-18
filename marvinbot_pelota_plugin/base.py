@@ -40,6 +40,7 @@ class MarvinBotPelotaPlugin(Plugin):
             'short_name': self.name,
             'enabled': True,
             'base_url': 'http://estadisticas.lidom.com/',
+            'base_url_lidom': 'http://www.lidom.com/home/',
             'emoji': emoji,
             'timer': 15*60
         }
@@ -52,6 +53,7 @@ class MarvinBotPelotaPlugin(Plugin):
         self.bot = adapter.bot
         self.add_handler(CommandHandler('pelota', self.on_pelota_command, command_description='Dominican Republic Baseball Standings.'))
         self.add_handler(CommandHandler('pizarra', self.on_pizarra_command, command_description='Dominican Republic Baseball Dashboard.'))
+        self.add_handler(CommandHandler('lidom', self.on_lidom_command, command_description='Dominican Republic Baseball Last News.'))
 
     def setup_schedules(self, adapter):
         pass
@@ -167,6 +169,37 @@ class MarvinBotPelotaPlugin(Plugin):
 
         return msg
 
+    # lidom
+    def lidom_http(self):
+        r = None
+
+        with requests.Session() as s:
+            response = s.post(self.config.get('base_url_lidom'), timeout=60)
+            r = self.lidom_parse(response.text)
+
+        return r
+
+    def lidom_parse(self, response_text):
+        r = []
+        html_soup = BeautifulSoup(response_text, 'html.parser')
+
+        for h2 in html_soup.find_all('h2', 'jeg_post_title')[:3]:
+            if h2.a:
+                new = {}
+                new['url'] = h2.a['href']
+                new['text'] = h2.a.text
+                r.append(new)
+
+        return r
+
+    def lidom_msg(self, news):
+        msg = "📰 Noticias:\n\n"
+
+        for new in news:
+            msg += "*{}*\n{}\n\n".format(new['text'], new['url'])
+
+        return msg
+
     # Commands
     def on_pizarra_command(self, update, *args, **kwargs):
         global last
@@ -200,6 +233,17 @@ class MarvinBotPelotaPlugin(Plugin):
         try:
             data = self.stats_http()
             msg = self.stats_msg(data, "Serie")
+        except Exception as err:
+            log.error("Pelota error: {}".format(err))
+            msg = "❌ Error."
+
+        self.adapter.bot.sendMessage(chat_id=message.chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview = True)
+
+    def on_lidom_command(self, update, *args, **kwargs):
+        message = get_message(update)
+        try:
+            data = self.lidom_http()
+            msg = self.lidom_msg(data)
         except Exception as err:
             log.error("Pelota error: {}".format(err))
             msg = "❌ Error."
