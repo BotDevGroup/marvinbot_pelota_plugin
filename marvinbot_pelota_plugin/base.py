@@ -91,7 +91,7 @@ class MarvinBotPelotaPlugin(Plugin):
         def getnum(txt):
             if not txt:
                 pass
-            rgx = re.compile(".*(\d+)\.png")
+            rgx = re.compile(".*\_(\d+)\.png")
             if rgx.match(txt):
                 return rgx.search(txt).group(1)
 
@@ -125,7 +125,8 @@ class MarvinBotPelotaPlugin(Plugin):
                     if result:
                         results.append(result)
 
-                    img = [getnum(i['src']) for i in tr.find_all('img') if not i.has_attr('alt')]
+                    img = [getnum(i['src']) for i in tr.find_all('img') if i.has_attr('alt') and i['alt'] == '']
+
                     if len(img) == 3:
                         game['obs'] = img
 
